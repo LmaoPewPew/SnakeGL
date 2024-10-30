@@ -1,0 +1,2 @@
+#pragma code_page(65001)
+1 /* CREATEPROCESS_MANIFEST_RESOURCE_ID */ 24 /* RT_MANIFEST */ "D:/Code/school/Projects/2d/snake/out/build/x64-Debug/external/glfw-3.1.2/tests/CMakeFiles/sharing.dir/embed.manifest"
