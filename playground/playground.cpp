@@ -354,7 +354,7 @@ SnakeGL::SnakeGL() : head(WIDTH / 2, HEIGHT / 2)
 
     std::random_device rd;
     std::mt19937 gen(rd()); // Mersenne Twister engine
-    std::uniform_int_distribution<int> distX(5, WIDTH-2);
+    std::uniform_int_distribution<int> distX(4, WIDTH-2);
     std::uniform_int_distribution<int> distY(5, HEIGHT-2);
     int rndXPos = distX(gen);
     int rndYPos = distY(gen);
@@ -403,8 +403,8 @@ void SnakeGL::updateSnake()
         // Food Position ändern im Grid
         std::random_device rd;
         std::mt19937 gen(rd()); // Mersenne Twister engine
-        std::uniform_int_distribution<int> distX(4, WIDTH);
-        std::uniform_int_distribution<int> distY(5, HEIGHT);
+        std::uniform_int_distribution<int> distX(4, WIDTH-2);
+        std::uniform_int_distribution<int> distY(5, HEIGHT-2);
 
         food.setX(distX(gen));
         food.setY(distY(gen));
