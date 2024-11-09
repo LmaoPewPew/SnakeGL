@@ -11,6 +11,8 @@ GLFWwindow* window;
 // Include GLM
 #include <glm/glm.hpp>
 using namespace glm;
+#include <glm/gtc/matrix_transform.hpp>
+
 
 #include <common/shader.hpp>
 
@@ -21,7 +23,6 @@ using namespace glm;
 #include <thread>
 #include <iostream>
 #include <random>
-#include <utility> // For std::pair
 
 // Constants
 // -------------------------------------------------------
@@ -92,11 +93,15 @@ private:
 
 public:
     SnakeHead() = default;
-    SnakeHead(int _x, int _y) : Entity(_x, _y) {
-        tail = std::vector<SnakeTail>(HEIGHT * WIDTH);
-    }
-    const inline std::vector<SnakeTail>& getTail() const { return tail; }
+    SnakeHead(int _x, int _y) : Entity(_x, _y) {}
+
+    // Method to return a non-const reference to tail
+    inline std::vector<SnakeTail>& getTail() { return tail; }
+
+    // Optionally, keep const getter for read-only access if needed elsewhere
+    inline const std::vector<SnakeTail>& getTail() const { return tail; }
 };
+
 
 class Empty : public Entity
 {
@@ -118,7 +123,6 @@ private:
     SnakeHead head;
     std::array<Entity, WIDTH* HEIGHT> grid;  // Using Empty instead of Entity
     INPUT_TYPE currentDirection = UP;
-    SnakeTail tail;
     Food food;
 
 public:
@@ -133,6 +137,7 @@ public:
     const inline Food& getFood() const { return food; }
 };
 // -------------------------------------------------------
+
 // Function definition
 // -------------------------------------------------------
 int main(void)
@@ -154,7 +159,7 @@ int main(void)
     const int timeoutDuration = 100; // Timeout duration in milliseconds
 
     // Start animation loop until escape key is pressed
-    do 
+    do
     {
         auto currentTime = std::chrono::steady_clock::now();
         auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastUpdateTime).count();
@@ -200,29 +205,33 @@ void updateAnimationLoop(SnakeGL& snake) {
     float cellWidth = 2.0f / WIDTH;  // Normalized width of each cell
     float cellHeight = 2.0f / HEIGHT; // Normalized height of each cell
 
+    // Calculate offset to ensure the whole map is visible
+    float offsetX = -1.0f + (cellWidth / 2);
+    float offsetY = 1.0f - (cellHeight / 2);
+
     for (int y = 0; y < HEIGHT; y++) {
         for (int x = 0; x < WIDTH; x++) {
             glm::vec3 cellColor(0.0f, 0.0f, 0.0f); // Default cell color (black)
 
             // Check if the current cell is the snake's head
             if (snake.getHead().getX() == x && snake.getHead().getY() == y) {
-                cellColor = glm::vec3(0.0f, 1.0f, 0.3f); // Green for the snake's head
+                cellColor = glm::vec3(0.0f, 0.8f, 0.4f); // Green for the snake's head
             }
             // Check if the current cell is part of the snake's body
             else if (std::any_of(snake.getHead().getTail().begin(), snake.getHead().getTail().end(),
                 [x, y](const SnakeTail& tailSeg) {
                     return tailSeg.getX() == x && tailSeg.getY() == y;
                 })) {
-                cellColor = glm::vec3(0.0f, 1.0f, 0.6f); // Red for the snake's body
+                cellColor = glm::vec3(0.0f, 1.0f, 0.4f); // Green for the snake's body
             }
             else if (snake.getFood().x == x && snake.getFood().y == y)
             {
-                cellColor = glm::vec3(1.0f, 0.0f, 0.0f); // Red for the snake's body
+                cellColor = glm::vec3(1.0f, 0.0f, 0.0f); // Red for the food
             }
 
             // Calculate the position of the cell in normalized coordinates
-            float xPos = (x * cellWidth) - 1.0f + (cellWidth / 2); // Center the x position
-            float yPos = 1.0f - (y * cellHeight) + (cellHeight / 2); // Center the y position (flipped)
+            float xPos = (x * cellWidth) + offsetX;
+            float yPos = offsetY - (y * cellHeight); // Flip Y to match OpenGL coordinates
 
             drawCell(xPos, yPos, cellColor); // Draw the cell at the computed position
         }
@@ -302,6 +311,7 @@ bool initializeVertexbuffer()
     return true;
 }
 
+
 bool cleanupVertexbuffer()
 {
     // Cleanup VBO
@@ -343,9 +353,9 @@ void inline setColor(float r, float g, float b)
 // Class definitions 
 // ----------------------------------------------------------
 
-SnakeGL::SnakeGL() : head(WIDTH / 2, HEIGHT / 2) 
+SnakeGL::SnakeGL() : head(WIDTH / 2, HEIGHT / 2)
 {
-    std::for_each(grid.begin(), grid.end(), [](auto& item) 
+    std::for_each(grid.begin(), grid.end(), [](auto& item)
         {
             item = Empty();
         });
@@ -354,16 +364,16 @@ SnakeGL::SnakeGL() : head(WIDTH / 2, HEIGHT / 2)
 
     std::random_device rd;
     std::mt19937 gen(rd()); // Mersenne Twister engine
-    std::uniform_int_distribution<int> distX(5, WIDTH-2);
-    std::uniform_int_distribution<int> distY(5, HEIGHT-2);
+    std::uniform_int_distribution<int> distX(4, WIDTH - 2);
+    std::uniform_int_distribution<int> distY(5, HEIGHT - 2);
     int rndXPos = distX(gen);
     int rndYPos = distY(gen);
 
     food = Food(rndXPos, rndYPos);
-   // std::cout << "Food_X: " << food.x << " Food_Y: " << food.y << std::endl; //to check the Pos
+    //std::cout << "Food_X: " << food.x << " Food_Y: " << food.y << std::endl; //to check the Pos
 }
 
-void SnakeGL::updateSnake() 
+void SnakeGL::updateSnake()
 {
     int newX = head.getX();
     int newY = head.getY();
@@ -371,56 +381,71 @@ void SnakeGL::updateSnake()
     switch (currentDirection)
     {
     case UP:
-        newY = (newY - 1 + HEIGHT) % HEIGHT; // Ensures newY is within bounds
+        newY = (newY - 1 + HEIGHT) % HEIGHT;
         break;
     case DOWN:
-        newY = (newY + 1) % HEIGHT; // Already correct
+        newY = (newY + 1) % HEIGHT;
         break;
     case LEFT:
-        newX = (newX - 1 + WIDTH) % WIDTH; // Ensures newX is within bounds
+        newX = (newX - 1 + WIDTH) % WIDTH;
         break;
     case RIGHT:
-        newX = (newX + 1) % WIDTH; // Already correct
+        newX = (newX + 1) % WIDTH;
         break;
     }
 
-    //std::cout << "x: " << newX << " y: " << newY << std::endl;
+    // Collision detection with tail
+    if (std::any_of(head.getTail().begin(), head.getTail().end(),
+        [newX, newY](const SnakeTail& segment) {
+            return segment.getX() == newX && segment.getY() == newY;
+        })) {
+        std::cout << "Game Over! Score: " << score << std::endl;
+        exit(0); // Exit on collision
+    }
 
-    grid[head.getY() * WIDTH + head.getX()] = Empty();  // Clear the current head position
+    // Update tail positions
+    for (size_t i = head.getTail().size(); i > 1; --i) {
+        head.getTail()[i - 1].setX(head.getTail()[i - 2].getX());
+        head.getTail()[i - 1].setY(head.getTail()[i - 2].getY());
+    }
+    if (!head.getTail().empty()) {
+        head.getTail()[0].setX(head.getX());
+        head.getTail()[0].setY(head.getY());
+    }
 
-    head.x = newX;
-    head.y = newY;
+    // Update head position
+    head.setX(newX);
+    head.setY(newY);
+    grid[newY * WIDTH + newX] = head;
 
-    grid[newY * WIDTH + newX] = head; // Set the new head position
-
-
-
-    if (newY == food.y && newX == food.x)
+    // Check if the snake has eaten the food
+    if (newY == food.getY() && newX == food.getX())
     {
-        // Output Score in CommandLine
         std::cout << "Score: " << ++score << std::endl;
 
-        // Food Position ändern im Grid
+        // Spawn new food
         std::random_device rd;
-        std::mt19937 gen(rd()); // Mersenne Twister engine
-        std::uniform_int_distribution<int> distX(4, WIDTH);
-        std::uniform_int_distribution<int> distY(5, HEIGHT);
-
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<int> distX(4, WIDTH - 2);
+        std::uniform_int_distribution<int> distY(5, HEIGHT - 2);
         food.setX(distX(gen));
         food.setY(distY(gen));
 
-        std::cout << "Food_X: " << food.x << " Food_Y: " << food.y << std::endl;
+        std::cout << "Food_X: " << food.x << " Food_Y: " << food.y << std::endl; //to check the Pos
 
-        // Tail verlängern
-        // draw new drawn Cell at newX and newY
-        // Store coord of head in double Array. (double array
-        // double array with current connections of 
+        // Extend tail by adding a new segment at the end
+        head.getTail().push_back(SnakeTail(newX, newY));
     }
-
-    // Tail bewegen (x und y vom vorherigen Glied kopieren
 }
 
-void SnakeGL::handleInput(INPUT_TYPE inputType) 
+
+void SnakeGL::handleInput(INPUT_TYPE inputType)
 {
-    currentDirection = inputType;
+    // Prevent reversing direction
+    if ((inputType == UP && currentDirection != DOWN) ||
+        (inputType == DOWN && currentDirection != UP) ||
+        (inputType == LEFT && currentDirection != RIGHT) ||
+        (inputType == RIGHT && currentDirection != LEFT)) {
+        currentDirection = inputType;
+    }
 }
