@@ -25,7 +25,7 @@ using namespace glm;
 #include <random>
 
 // Constants
-// -------------------------------------------------------
+// ----------------------------------------------------------
 int score = 0;
 constexpr auto WIDTH = 20;
 constexpr auto HEIGHT = 20;
@@ -34,10 +34,10 @@ constexpr auto WINDOW_HEIGHT = 800;
 
 static constexpr int CELL_WIDTH = WINDOW_WIDTH / WIDTH;
 static constexpr int CELL_HEIGHT = WINDOW_HEIGHT / HEIGHT;
-// -------------------------------------------------------
+// ----------------------------------------------------------
 
 // Forward declaration
-// -------------------------------------------------------
+// ----------------------------------------------------------
 class Entity;
 class Empty;
 class SnakeTail;
@@ -53,10 +53,10 @@ bool initializeWindow();
 bool initializeVertexbuffer();
 bool cleanupVertexbuffer();
 bool closeWindow();
-// -------------------------------------------------------
+// ----------------------------------------------------------
 
 // Class definition
-// -------------------------------------------------------
+// ----------------------------------------------------------
 enum INPUT_TYPE
 {
     UP,
@@ -102,7 +102,6 @@ public:
     inline const std::vector<SnakeTail>& getTail() const { return tail; }
 };
 
-
 class Empty : public Entity
 {
 public:
@@ -136,10 +135,10 @@ public:
     const INPUT_TYPE getDir() { return currentDirection; }
     const inline Food& getFood() const { return food; }
 };
-// -------------------------------------------------------
+// ----------------------------------------------------------
 
 // Function definition
-// -------------------------------------------------------
+// ----------------------------------------------------------
 int main(void)
 {
     SnakeGL snake{};
@@ -241,6 +240,12 @@ void updateAnimationLoop(SnakeGL& snake) {
     glfwPollEvents();
 }
 
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    // Set the window size back to the fixed size if resized
+    glfwSetWindowSize(window, WINDOW_WIDTH, WINDOW_HEIGHT);
+}
+
 bool initializeWindow()
 {
     // Initialise GLFW
@@ -266,6 +271,10 @@ bool initializeWindow()
         glfwTerminate();
         return false;
     }
+
+    // Set the callback to prevent resizing
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
     glfwMakeContextCurrent(window);
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
@@ -286,6 +295,7 @@ bool initializeWindow()
     glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
     return true;
 }
+
 
 bool initializeVertexbuffer()
 {
@@ -310,7 +320,6 @@ bool initializeVertexbuffer()
 
     return true;
 }
-
 
 bool cleanupVertexbuffer()
 {
@@ -348,11 +357,10 @@ void inline setColor(float r, float g, float b)
 {
     glUniform3f(glGetUniformLocation(programID, "ourColor"), r, g, b);
 }
-
-// -------------------------------------------------------
-// Class definitions 
 // ----------------------------------------------------------
 
+// Class definitions 
+// ----------------------------------------------------------
 SnakeGL::SnakeGL() : head(WIDTH / 2, HEIGHT / 2)
 {
     std::for_each(grid.begin(), grid.end(), [](auto& item)
@@ -399,7 +407,7 @@ void SnakeGL::updateSnake()
         [newX, newY](const SnakeTail& segment) {
             return segment.getX() == newX && segment.getY() == newY;
         })) {
-        std::cout << "Game Over! Score: " << score << std::endl;
+        std::cout << "Game Over!! -- Your Score: " << score << std::endl;
         exit(0); // Exit on collision
     }
 
@@ -431,13 +439,12 @@ void SnakeGL::updateSnake()
         food.setX(distX(gen));
         food.setY(distY(gen));
 
-        std::cout << "Food_X: " << food.x << " Food_Y: " << food.y << std::endl; //to check the Pos
+        //std::cout << "Food_X: " << food.x << " Food_Y: " << food.y << std::endl; //to check the Pos
 
         // Extend tail by adding a new segment at the end
         head.getTail().push_back(SnakeTail(newX, newY));
     }
 }
-
 
 void SnakeGL::handleInput(INPUT_TYPE inputType)
 {
