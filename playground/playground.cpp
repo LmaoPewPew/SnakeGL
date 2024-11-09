@@ -55,8 +55,6 @@ bool initializeVertexbuffer();
 bool cleanupVertexbuffer();
 bool closeWindow();
 int gameSpeed(int speedValue);
-
-
 // ----------------------------------------------------------
 
 // Class definition
@@ -161,6 +159,8 @@ int main(void)
     auto lastUpdateTime = std::chrono::steady_clock::now();
     int timeoutDuration = 150; // Timeout duration in milliseconds
 
+    std::cout << "Score: 0\n" << "Speed Level at 5" << std::endl;
+
     // Start animation loop until escape key is pressed
     do
     {
@@ -214,18 +214,27 @@ void updateAnimationLoop(SnakeGL& snake) {
     float offsetX = -1.0f + (cellWidth / 2);
     float offsetY = 1.0f - (cellHeight / 2);
 
-    // Process input only when a valid key is pressed (check input)
+    // Check for key presses in the current frame to avoid "random" movement
     INPUT_TYPE dir = snake.getDir(); // Get the current direction
 
-    // Check for key presses in the current frame to avoid "random" movement
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) dir = UP;
-    else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) dir = DOWN;
-    else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) dir = LEFT;
-    else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) dir = RIGHT;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        dir = UP;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        dir = DOWN;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        dir = LEFT;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        dir = RIGHT;
+    }
 
-    snake.handleInput(dir); // Handle the updated input
+    // Update snake direction only if new input is valid (i.e., not opposite direction)
+    snake.handleInput(dir);
 
-    snake.updateSnake(); // Update the snake's state (movement)
+    // Update the snake's state (movement)
+    snake.updateSnake();
 
     // Draw all the cells on the grid
     for (int y = 0; y < HEIGHT; y++) {
@@ -429,7 +438,7 @@ void SnakeGL::updateSnake()
         [newX, newY](const SnakeTail& segment) {
             return segment.getX() == newX && segment.getY() == newY;
         })) {
-        std::cout << "Game Over!! -- Your Score: " << score << std::endl; ////////////////////////////////////////////////////
+        std::cout << "Game Over!! -- Your Finale Score is " << score << "!!" << std::endl; ////////////////////////////////////////////////////
         exit(0); // Exit on collision
     }
 
@@ -480,12 +489,13 @@ void SnakeGL::handleInput(INPUT_TYPE inputType)
 }
 
 int gameSpeed(int speedValue) {
-    std::cout << speedValue << std::endl;
     int decreaseAmount = 0;
 
     if (score % 5 == 0 && score != lastMultipleOfFive) {
-        decreaseAmount = 5;
         lastMultipleOfFive = score;
+        decreaseAmount = 5;
+        
+        std::cout << "Speed Level at " << score+decreaseAmount << std::endl;
     }
 
     return std::max(90, speedValue - decreaseAmount);
