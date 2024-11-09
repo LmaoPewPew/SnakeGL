@@ -27,6 +27,7 @@ using namespace glm;
 // Constants
 // ----------------------------------------------------------
 int score = 0;
+int lastMultipleOfFive = 0;
 constexpr auto WIDTH = 20;
 constexpr auto HEIGHT = 20;
 constexpr auto WINDOW_WIDTH = 800;
@@ -53,6 +54,9 @@ bool initializeWindow();
 bool initializeVertexbuffer();
 bool cleanupVertexbuffer();
 bool closeWindow();
+int gameSpeed(int speedValue);
+
+
 // ----------------------------------------------------------
 
 // Class definition
@@ -155,13 +159,15 @@ int main(void)
     programID = LoadShaders("SimpleVertexShader.vertexshader", "SimpleFragmentShader.fragmentshader");
 
     auto lastUpdateTime = std::chrono::steady_clock::now();
-    const int timeoutDuration = 100; // Timeout duration in milliseconds
+    int timeoutDuration = 150; // Timeout duration in milliseconds
 
     // Start animation loop until escape key is pressed
     do
     {
         auto currentTime = std::chrono::steady_clock::now();
         auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastUpdateTime).count();
+
+        timeoutDuration = gameSpeed(timeoutDuration);
 
         if (elapsedTime >= timeoutDuration) {
             INPUT_TYPE dir = snake.getDir();
@@ -208,6 +214,20 @@ void updateAnimationLoop(SnakeGL& snake) {
     float offsetX = -1.0f + (cellWidth / 2);
     float offsetY = 1.0f - (cellHeight / 2);
 
+    // Process input only when a valid key is pressed (check input)
+    INPUT_TYPE dir = snake.getDir(); // Get the current direction
+
+    // Check for key presses in the current frame to avoid "random" movement
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) dir = UP;
+    else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) dir = DOWN;
+    else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) dir = LEFT;
+    else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) dir = RIGHT;
+
+    snake.handleInput(dir); // Handle the updated input
+
+    snake.updateSnake(); // Update the snake's state (movement)
+
+    // Draw all the cells on the grid
     for (int y = 0; y < HEIGHT; y++) {
         for (int x = 0; x < WIDTH; x++) {
             glm::vec3 cellColor(0.0f, 0.0f, 0.0f); // Default cell color (black)
@@ -293,9 +313,9 @@ bool initializeWindow()
 
     // Dark blue background
     glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-    return true;
-}
 
+    return true;
+    }
 
 bool initializeVertexbuffer()
 {
@@ -402,12 +422,14 @@ void SnakeGL::updateSnake()
         break;
     }
 
+
+
     // Collision detection with tail
     if (std::any_of(head.getTail().begin(), head.getTail().end(),
         [newX, newY](const SnakeTail& segment) {
             return segment.getX() == newX && segment.getY() == newY;
         })) {
-        std::cout << "Game Over!! -- Your Score: " << score << std::endl;
+        std::cout << "Game Over!! -- Your Score: " << score << std::endl; ////////////////////////////////////////////////////
         exit(0); // Exit on collision
     }
 
@@ -426,7 +448,7 @@ void SnakeGL::updateSnake()
     head.setY(newY);
     grid[newY * WIDTH + newX] = head;
 
-    // Check if the snake has eaten the food
+    // Check if the snake has eaten the food ////////////////////////////////////////////////////////////// HEREE SCORE GETS UPDATED
     if (newY == food.getY() && newX == food.getX())
     {
         std::cout << "Score: " << ++score << std::endl;
@@ -448,11 +470,23 @@ void SnakeGL::updateSnake()
 
 void SnakeGL::handleInput(INPUT_TYPE inputType)
 {
-    // Prevent reversing direction
+    // Prevent reversing direction: only update the direction if the new input isn't opposite of the current direction
     if ((inputType == UP && currentDirection != DOWN) ||
         (inputType == DOWN && currentDirection != UP) ||
         (inputType == LEFT && currentDirection != RIGHT) ||
         (inputType == RIGHT && currentDirection != LEFT)) {
         currentDirection = inputType;
     }
+}
+
+int gameSpeed(int speedValue) {
+    std::cout << speedValue << std::endl;
+    int decreaseAmount = 0;
+
+    if (score % 5 == 0 && score != lastMultipleOfFive) {
+        decreaseAmount = 5;
+        lastMultipleOfFive = score;
+    }
+
+    return std::max(90, speedValue - decreaseAmount);
 }
